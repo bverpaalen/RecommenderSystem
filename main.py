@@ -4,7 +4,7 @@ from collections import OrderedDict as OD
 from sklearn import linear_model
 
 filedir = "ml-1m/"
-filename = "ratingsSmall.dat"
+filename = "ratings1000.dat"
 ratings = []
 nfolds = 5
 
@@ -94,7 +94,7 @@ def trainAndTest(matrix, globalAvg, movieAvgs):
         train = ratings[train_sel]
         test = ratings[test_sel]
 
-        #applyGlobalAvg(err_train, err_test, fold, train, test, globalAvg)
+        applyGlobalAvg(err_train, err_test, fold, train, test, globalAvg)
         applyAvgPerItem(err_train, err_test, fold, train, test, movieAvgs)
 
     # print the final conclusion:
@@ -114,7 +114,7 @@ def applyAvgPerItem(err_train, err_test, fold, train, test, movieAvgs):
     print("The average rating per item")
 
     trainMovieIds = np.unique(train[:, 1])
-    trainMovieRatings = np.array([np.array(train[train[:, 1] == i, 2]) for i in trainMovieIds])
+    trainMovieRatings = np.array([list(train[train[:, 1] == i, 2]) for i in trainMovieIds])
     som_err_train = 0
     iterations = 0
     for movieId in trainMovieIds:
@@ -127,7 +127,7 @@ def applyAvgPerItem(err_train, err_test, fold, train, test, movieAvgs):
     err_train[1][fold] = np.sqrt(np.mean((avg_err_train) ** 2))
 
     testMovieIds = np.unique(test[:, 1])
-    testMovieRatings = np.array([np.array(test[test[:, 1] == i, 2]) for i in testMovieIds])
+    testMovieRatings = np.array([list(test[test[:, 1] == i, 2]) for i in testMovieIds])
     som_err_test = 0
     iterations = 0
     for movieId in testMovieIds:
@@ -135,7 +135,8 @@ def applyAvgPerItem(err_train, err_test, fold, train, test, movieAvgs):
             movieAvg = movieAvgs[movieId]
             som_err_test += np.mean(ratings - movieAvg)
             iterations += 1
-    err_test[1][fold] = np.sqrt(np.mean((som_err_test) ** 2))
+    avg_err_test = som_err_test / iterations
+    err_test[1][fold] = np.sqrt(np.mean((avg_err_test) ** 2))
 
     # print errors:
     print("Fold " + str(fold) + ": RMSE_train=" + str(err_train[1][fold]) + "; RMSE_test=" + str(err_test[1][fold]))
