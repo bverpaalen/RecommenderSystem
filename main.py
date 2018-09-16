@@ -1,16 +1,16 @@
 import pandas as pd
 import numpy as np
+import Rating as rating
 from collections import OrderedDict as OD
 from sklearn import linear_model
 
 filedir = "ml-1m/"
-filename = "ratings10000.dat"
+filename = "ratings1000.dat"
 ratings = []
 nfolds = 5
 
 def main(filePath):
     matrix = preProcessing(filePath)
-    
     print("Matrix: ")
     print(matrix.head(10))
     print("")
@@ -31,6 +31,8 @@ def main(filePath):
 
     print("Movies: ")
     printDic(movieAvgs)
+
+    rating.getTrainAndTestSets()
 
     trainAndTest(matrix, globalAvg, movieAvgs)
 
