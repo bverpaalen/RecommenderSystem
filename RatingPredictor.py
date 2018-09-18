@@ -49,7 +49,7 @@ def predictRatingPerItem(trainAndTestSets):
 def predictRating(trainAndTestSets, basedOn):
     print("")
     meanRmses = []
-    predictions = [{} for i in range(len(trainAndTestSets))]
+    foldMovieRatings = [{} for i in range(len(trainAndTestSets))]
     for fold, dataSet in enumerate(trainAndTestSets):
         trainSet = dataSet[0]
         testSet = dataSet[1]
@@ -65,6 +65,8 @@ def predictRating(trainAndTestSets, basedOn):
         trainMovies = movieRatings["trainMovies"]
         testMovies = movieRatings["testMovies"]
 
+        foldMovieRatings[fold].update(trainMovies)
+
         rmses = []
         for id, testRatings in testMovies.items():
 
@@ -74,8 +76,6 @@ def predictRating(trainAndTestSets, basedOn):
                 movieAvg = np.mean(trainMovies[id])
             else:
                 movieAvg = rating.movieAvg(id)
-
-            predictions[fold].update({id: movieAvg})
 
             err = movieAvg - testRatings
             sqErr = (movieAvg - testRatings) ** 2
@@ -89,7 +89,7 @@ def predictRating(trainAndTestSets, basedOn):
         # print error:
         print("Fold " + str(fold) + ": RMSE: " + str(meanRmses[fold]))
 
-    return [meanRmses, predictions]
+    return [meanRmses, foldMovieRatings]
 
 def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser):
     styler.printHeader("Linear combination of user and item averages")
@@ -105,8 +105,8 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
         trainSet = dataSet[0]
 
         for userId, itemId, actualRating in trainSet:
-            predictedRatingPerUser = predictedRatingsPerUser[fold][userId]
-            predictedRatingPerItem = predictedRatingsPerItem[fold][itemId]
+            predictedRatingPerUser = np.mean(predictedRatingsPerUser[fold][userId])
+            predictedRatingPerItem = np.mean(predictedRatingsPerItem[fold][itemId])
 
             # Our task is to find coefficients A, B, C, such that the linear combination:
             # A*x + B*y + C  approximates y as good as possible.
@@ -115,7 +115,7 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
     linearPrediction = np.array(linearPrediction)
 
     predictionUserItem = alpha * linearPrediction[:, 0] + beta * linearPrediction[:, 1] + delta
-    S = np.linalg.lstsq(linearPrediction, predictionUserItem,rcond="None")
+    S = np.linalg.lstsq(linearPrediction, predictionUserItem)
 
     SSEOld = S[1] 
     SSENew = 0
