@@ -115,7 +115,7 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
     linearPrediction = np.array(linearPrediction)
 
     predictionUserItem = alpha * linearPrediction[:, 0] + beta * linearPrediction[:, 1] + delta
-    S = np.linalg.lstsq(linearPrediction, predictionUserItem)
+    S = np.linalg.lstsq(linearPrediction, predictionUserItem, rcond=-1)
 
     SSEOld = S[1] 
     SSENew = 0
@@ -124,7 +124,7 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
         predictionUserItem = alpha * linearPrediction[:, 0] + beta * linearPrediction[:, 1] + delta + 0.1 * np.random.randn(len(linearPrediction[:,0]))
 
         # S[0] is what we need (coefficients, A, B, C):
-        S = np.linalg.lstsq(linearPrediction, predictionUserItem,rcond="None")
+        S = np.linalg.lstsq(linearPrediction, predictionUserItem,rcond=-1)
 
         SSENew = S[1]
 
