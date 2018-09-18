@@ -94,25 +94,45 @@ def predictRating(trainAndTestSets, basedOn):
 def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser):
     styler.printHeader("Linear combination of user and item averages")
 
-    X = []
-    for fold, dataSet in enumerate(trainAndTestSets):
-        testSet = dataSet[1]
+    trainLoops = 100
 
-        for userId, itemId, actualRating in testSet:
+    alpha = 2
+    beta = 3
+    delta = 0.5
+
+    linearPrediction = []
+    for fold, dataSet in enumerate(trainAndTestSets):
+        trainSet = dataSet[0]
+
+        for userId, itemId, actualRating in trainSet:
             predictedRatingPerUser = predictedRatingsPerUser[fold][userId]
             predictedRatingPerItem = predictedRatingsPerItem[fold][itemId]
 
             # Our task is to find coefficients A, B, C, such that the linear combination:
             # A*x + B*y + C  approximates y as good as possible.
-            X.append([predictedRatingPerUser, predictedRatingPerItem, np.ones(1)])
+            linearPrediction.append([predictedRatingPerUser, predictedRatingPerItem])
 
-    X = np.array(X)
+    linearPrediction = np.array(linearPrediction)
 
-    predictionUserItem = 2 * X[:, 0] + 3 * X[:, 1] + 0.5 + 0.1 * np.random.randn(len(X[:,0]))
+    predictionUserItem = alpha * linearPrediction[:, 0] + beta * linearPrediction[:, 1] + delta
+    S = np.linalg.lstsq(linearPrediction, predictionUserItem,rcond="None")
 
-    # S[0] is what we need (coefficients, A, B, C):
-    S = np.linalg.lstsq(X, predictionUserItem)
+    SSEOld = S[1] 
+    SSENew = 0
+
+    for i in range(0,100,1):
+        predictionUserItem = alpha * linearPrediction[:, 0] + beta * linearPrediction[:, 1] + delta + 0.1 * np.random.randn(len(linearPrediction[:,0]))
+
+        # S[0] is what we need (coefficients, A, B, C):
+        S = np.linalg.lstsq(linearPrediction, predictionUserItem,rcond="None")
+
+        SSENew = S[1]
+
+        if(SSENew < SSEOld):
+            alpha = S[0][0]
+            beta = S[0][1]
+            SSEOld = SSENew
 
     print("\nCoefficients: " + str(S[0][0:2]))
 
-    styler.printFooter("Intercept: " + str(S[0][2]))
+    #styler.printFooter("Intercept: " + str(S[0][2]))

@@ -7,7 +7,7 @@ from collections import OrderedDict as OD
 from sklearn import linear_model
 
 filedir = "ml-1m/"
-ratingsFilename = "ratings10000.dat"
+ratingsFilename = "ratings1000.dat"
 nfolds = 5
 
 def main():
