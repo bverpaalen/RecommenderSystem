@@ -94,11 +94,14 @@ def predictRating(trainAndTestSets, basedOn):
 def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser):
     styler.printHeader("Linear combination of user and item averages")
 
+    userMeans = []
+    itemMeans = []
+
     trainLoops = 100
 
-    alpha = 2
-    beta = 3
-    delta = 0.5
+    alpha = 10
+    beta = 10
+    delta = 0
 
     linearPrediction = []
     for fold, dataSet in enumerate(trainAndTestSets):
@@ -110,29 +113,41 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
 
             # Our task is to find coefficients A, B, C, such that the linear combination:
             # A*x + B*y + C  approximates y as good as possible.
-            linearPrediction.append([predictedRatingPerUser, predictedRatingPerItem])
+            userMeans.append(predictedRatingPerUser)
+            itemMeans.append(predictedRatingPerItem)
 
-    linearPrediction = np.array(linearPrediction)
-
-    predictionUserItem = alpha * linearPrediction[:, 0] + beta * linearPrediction[:, 1] + delta
+    userMeans = np.array(userMeans)
+    itemMeans = np.array(itemMeans)
+            
+    predictionUserItem = alpha * userMeans + beta * itemMeans + delta
+            
+    linearPrediction = np.vstack([userMeans,itemMeans,np.ones(len(userMeans))]).T
+    
+    
     S = np.linalg.lstsq(linearPrediction, predictionUserItem)
 
     SSEOld = S[1] 
     SSENew = 0
 
     for i in range(0,100,1):
+        #print(0.1 * np.random.randn(len(linearPrediction[:,0])))
         predictionUserItem = alpha * linearPrediction[:, 0] + beta * linearPrediction[:, 1] + delta + 0.1 * np.random.randn(len(linearPrediction[:,0]))
-
         # S[0] is what we need (coefficients, A, B, C):
-        S = np.linalg.lstsq(linearPrediction, predictionUserItem,rcond="None")
+        S2 = np.linalg.lstsq(linearPrediction, predictionUserItem,rcond=-1)
 
-        SSENew = S[1]
+        SSENew = S2[1]
+
+        print(SSENew)
+        print(SSEOld)
+        print()
 
         if(SSENew < SSEOld):
-            alpha = S[0][0]
-            beta = S[0][1]
+            print("CHANGE COEFFICIENTS")
+            alpha = S2[0][0]
+            beta = S2[0][1]
             SSEOld = SSENew
+            S = S2
 
-    print("\nCoefficients: " + str(S[0][0:2]))
+    print("\nCoefficients: " + str(alpha)+ " "+str(beta))
 
     #styler.printFooter("Intercept: " + str(S[0][2]))
