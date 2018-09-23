@@ -154,48 +154,81 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
     #styler.printFooter("Intercept: " + str(S[0][2]))
 
 
-def predictByMatrixFactorization(dataSet, uUser, vItem, numFactors=10, numIter=75, regularization=0.05, learnRate=0.005):
+def predictByMatrixFactorization(trainAndTestSets, globalAvg, numFactors=10, numIter=75, regularization=0.05, learnRate=0.005):
 
     styler.printHeader("Matrix factorization")
 
+    # avg. rmse over all folds
     sumAvgRmse = 0
-    for fold, dataSet in enumerate(dataSet):
+    sumTestRmse = 0
+    for fold, dataSet in enumerate(trainAndTestSets):
+        print()
         trainSet = dataSet[0]
         testSet = dataSet[1]
 
+        # create 2D sparse ratings matrix, with user id's as rows and movie id's as columns
         trainUserIds = trainSet[:, 0]
         trainMovieIds = trainSet[:, 1]
         trainRatings = trainSet[:, 2]
         trainMatrix = sparse.coo_matrix((trainRatings,(trainUserIds, trainMovieIds)))
 
+        # print the matrix
         #for row, col, value in zip(matrix.row, matrix.col, matrix.data):
             #print("({0}, {1}) {2}".format(row, col, value))
 
+        # create user and item vectors of random digit factors
         userNrs, movieNrs = trainMatrix.shape
-        uUser = np.random.rand(userNrs, numFactors)
-        vItem = np.random.rand(numFactors, movieNrs)
+        np.random.seed(123)
+        uniqueUserIds = set(trainUserIds)
+        uniqueMovieIds = set(trainMovieIds)
+        uUser = dict(zip(uniqueUserIds, [np.array(f) for f in zip(*np.random.rand(numFactors, len(uniqueUserIds)))]))
+        vItem = dict(zip(uniqueMovieIds, [np.array(f) for f in zip(*np.random.rand(numFactors, len(uniqueMovieIds)))]))
+        #uUser = np.random.rand(userNrs, numFactors)
+        #vItem = np.random.rand(numFactors, movieNrs)
 
         ratings = trainMatrix.data
 
         sumRmse = 0
+        # iterate the matrix 'numIter' times
         for i in range(numIter):
             sse = 0
             for user, movie, rating in zip(trainMatrix.row, trainMatrix.col, ratings):
 
                 # calculate the error
-                error = rating - np.sum(uUser[user, :] * vItem[:, movie])
+                error = rating - np.sum(uUser[user] * vItem[movie])
 
                 # update parameters uUser and vItem
-                uUser[user, :] = uUser[user, :] + learnRate * (error * vItem[:, movie] - regularization * uUser[user, :])
-                vItem[:, movie] = vItem[:, movie] + learnRate * (error * uUser[user, :] - regularization * vItem[:, movie])
+                uUser[user] = uUser[user] + learnRate * (error * vItem[movie] - regularization * uUser[user])
+                vItem[movie] = vItem[movie] + learnRate * (error * uUser[user] - regularization * vItem[movie])
 
                 sse += error ** 2
 
             rmse = np.sqrt(sse / len(ratings))
             sumRmse += rmse
             #print(rmse)
+
         avgRmse = sumRmse / numIter
         sumAvgRmse += avgRmse
         print("Avg train RMSE for fold {0}: {1}".format(fold, avgRmse))
 
-    styler.printFooter("Avg train RMSE: " + str(sumAvgRmse / 5))
+        ###############################
+        # TEST
+        ###############################
+        testUserIds = testSet[:, 0]
+        testMovieIds = testSet[:, 1]
+        testRatings = testSet[:, 2]
+        testMatrix = sparse.coo_matrix((testRatings, (testUserIds, testMovieIds)))
+
+        testSse = 0
+        for user, movie, rating in zip(testMatrix.row, testMatrix.col, testMatrix.data):
+            # calculate the error
+            if (user in uUser) and (movie in vItem):
+                testSse += (rating - np.sum(uUser[user] * vItem[movie])) ** 2
+            else:
+                testSse += (rating - globalAvg) ** 2
+
+        testRmse = np.sqrt(testSse / len(ratings))
+        sumTestRmse += testRmse
+        print("Avg test RMSE for fold {0}: {1}".format(fold, testRmse))
+
+    styler.printFooter("Avg train RMSE: " + str(sumAvgRmse / len(trainAndTestSets)) + "\nAvg test RMSE: " + str(sumTestRmse / len(trainAndTestSets)))

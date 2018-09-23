@@ -31,6 +31,6 @@ def main():
 
     #userFactors, itemFactors = rating.getUserAndItemFactors(ratings)
 
-    rp.predictByMatrixFactorization(trainAndTestSets, 0, 0)
+    rp.predictByMatrixFactorization(trainAndTestSets, globalAvg)
 
 main()
