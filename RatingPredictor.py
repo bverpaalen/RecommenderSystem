@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.sparse as sparse
 import Rating as rating
 import Styler as styler
 
@@ -151,3 +152,50 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
     print("\nCoefficients: " + str(alpha)+ " "+str(beta))
 
     #styler.printFooter("Intercept: " + str(S[0][2]))
+
+
+def predictByMatrixFactorization(dataSet, uUser, vItem, numFactors=10, numIter=75, regularization=0.05, learnRate=0.005):
+
+    styler.printHeader("Matrix factorization")
+
+    sumAvgRmse = 0
+    for fold, dataSet in enumerate(dataSet):
+        trainSet = dataSet[0]
+        testSet = dataSet[1]
+
+        trainUserIds = trainSet[:, 0]
+        trainMovieIds = trainSet[:, 1]
+        trainRatings = trainSet[:, 2]
+        trainMatrix = sparse.coo_matrix((trainRatings,(trainUserIds, trainMovieIds)))
+
+        #for row, col, value in zip(matrix.row, matrix.col, matrix.data):
+            #print("({0}, {1}) {2}".format(row, col, value))
+
+        userNrs, movieNrs = trainMatrix.shape
+        uUser = np.random.rand(userNrs, numFactors)
+        vItem = np.random.rand(numFactors, movieNrs)
+
+        ratings = trainMatrix.data
+
+        sumRmse = 0
+        for i in range(numIter):
+            sse = 0
+            for user, movie, rating in zip(trainMatrix.row, trainMatrix.col, ratings):
+
+                # calculate the error
+                error = rating - np.sum(uUser[user, :] * vItem[:, movie])
+
+                # update parameters uUser and vItem
+                uUser[user, :] = uUser[user, :] + learnRate * (error * vItem[:, movie] - regularization * uUser[user, :])
+                vItem[:, movie] = vItem[:, movie] + learnRate * (error * uUser[user, :] - regularization * vItem[:, movie])
+
+                sse += error ** 2
+
+            rmse = np.sqrt(sse / len(ratings))
+            sumRmse += rmse
+            #print(rmse)
+        avgRmse = sumRmse / numIter
+        sumAvgRmse += avgRmse
+        print("Avg train RMSE for fold {0}: {1}".format(fold, avgRmse))
+
+    styler.printFooter("Avg train RMSE: " + str(sumAvgRmse / 5))

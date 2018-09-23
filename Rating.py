@@ -3,6 +3,15 @@ import numpy as np
 nfolds = 5
 ratings = []
 
+def getUserAndItemFactors(ratings):
+    userIds = set(ratings[:,0])
+    itemIds = set(ratings[:,1])
+
+    userFactors = dict(zip(userIds, [np.array(f) for f in zip(*np.random.rand(10, len(userIds)))]))
+    itemFactors = dict(zip(itemIds, [np.array(f) for f in zip(*np.random.rand(10, len(itemIds)))]))
+
+    return (userFactors, itemFactors)
+
 def getTrainAndTestSets(ratings):
     # to make sure you are able to repeat results, set the random seed to something:
     np.random.seed(17)

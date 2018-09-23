@@ -7,7 +7,7 @@ from collections import OrderedDict as OD
 from sklearn import linear_model
 
 filedir = "ml-1m/"
-ratingsFilename = "ratings1000.dat"
+ratingsFilename = "ratings.dat"
 nfolds = 5
 
 def main():
@@ -21,12 +21,16 @@ def main():
 
     trainAndTestSets = rating.getTrainAndTestSets(ratings)
 
-    rp.predictBasedOnGlobalAvg(trainAndTestSets, globalAvg)
+    #rp.predictBasedOnGlobalAvg(trainAndTestSets, globalAvg)
 
-    predictedRatingsPerItem = rp.predictRatingPerItem(trainAndTestSets)
+    #predictedRatingsPerItem = rp.predictRatingPerItem(trainAndTestSets)
 
-    predictedRatingsPerUser = rp.predictRatingPerUser(trainAndTestSets)
+    #predictedRatingsPerUser = rp.predictRatingPerUser(trainAndTestSets)
 
-    rp.predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser)
+    #rp.predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser)
+
+    #userFactors, itemFactors = rating.getUserAndItemFactors(ratings)
+
+    rp.predictByMatrixFactorization(trainAndTestSets, 0, 0)
 
 main()
