@@ -95,18 +95,18 @@ def predictRating(trainAndTestSets, basedOn):
 def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser):
     styler.printHeader("Linear combination of user and item averages")
 
-    userMeans = []
-    itemMeans = []
-
     trainLoops = 100
 
-    alpha = 10
-    beta = 10
+    alpha = 0.5
+    beta = 0.5
     delta = 0
 
     linearPrediction = []
     for fold, dataSet in enumerate(trainAndTestSets):
         trainSet = dataSet[0]
+
+        userMeans = []
+        itemMeans = []
 
         for userId, itemId, actualRating in trainSet:
             predictedRatingPerUser = np.mean(predictedRatingsPerUser[fold][userId])
@@ -117,41 +117,16 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
             userMeans.append(predictedRatingPerUser)
             itemMeans.append(predictedRatingPerItem)
 
-    userMeans = np.array(userMeans)
-    itemMeans = np.array(itemMeans)
-            
-    predictionUserItem = alpha * userMeans + beta * itemMeans + delta
-            
-    linearPrediction = np.vstack([userMeans,itemMeans,np.ones(len(userMeans))]).T
-    
-    
-    S = np.linalg.lstsq(linearPrediction, predictionUserItem)
+        linearPrediction = np.vstack([userMeans,itemMeans,np.ones(len(userMeans))]).T
+        
+        S = np.linalg.lstsq(linearPrediction, trainSet[:,2])
 
-    SSEOld = S[1] 
-    SSENew = 0
+        SSE = str(S[1])
 
-    for i in range(0,100,1):
-        #print(0.1 * np.random.randn(len(linearPrediction[:,0])))
-        predictionUserItem = alpha * linearPrediction[:, 0] + beta * linearPrediction[:, 1] + delta + 0.1 * np.random.randn(len(linearPrediction[:,0]))
-        # S[0] is what we need (coefficients, A, B, C):
-        S2 = np.linalg.lstsq(linearPrediction, predictionUserItem,rcond=-1)
-
-        SSENew = S2[1]
-
-        print(SSENew)
-        print(SSEOld)
-        print()
-
-        if(SSENew < SSEOld):
-            print("CHANGE COEFFICIENTS")
-            alpha = S2[0][0]
-            beta = S2[0][1]
-            SSEOld = SSENew
-            S = S2
-
-    print("\nCoefficients: " + str(alpha)+ " "+str(beta))
-
-    #styler.printFooter("Intercept: " + str(S[0][2]))
+        print("\nCoefficients: " + str(S[0][0])+ " "+str(S[0][1]))
+        print("Delta: "+str(S[0][2]))
+        print("Current SSE: "+SSE)   
+ #styler.printFooter("Intercept: " + str(S[0][2]))
 
 
 def predictByMatrixFactorization(trainAndTestSets, globalAvg, numFactors=10, numIter=75, regularization=0.05, learnRate=0.005):
