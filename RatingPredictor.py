@@ -157,14 +157,15 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
 def predictByMatrixFactorization(trainAndTestSets, globalAvg, numFactors=10, numIter=75, regularization=0.05, learnRate=0.005):
 
     styler.printHeader("Matrix factorization")
+    print()
 
     # avg. rmse over all folds
     sumAvgRmse = 0
     sumTestRmse = 0
+    uUsers = []
+    vItems = []
     for fold, dataSet in enumerate(trainAndTestSets):
-        print()
         trainSet = dataSet[0]
-        testSet = dataSet[1]
 
         # create 2D sparse ratings matrix, with user id's as rows and movie id's as columns
         trainUserIds = trainSet[:, 0]
@@ -182,7 +183,9 @@ def predictByMatrixFactorization(trainAndTestSets, globalAvg, numFactors=10, num
         uniqueUserIds = set(trainUserIds)
         uniqueMovieIds = set(trainMovieIds)
         uUser = dict(zip(uniqueUserIds, [np.array(f) for f in zip(*np.random.rand(numFactors, len(uniqueUserIds)))]))
+        uUsers.append(uUser)
         vItem = dict(zip(uniqueMovieIds, [np.array(f) for f in zip(*np.random.rand(numFactors, len(uniqueMovieIds)))]))
+        vItems.append(vItem)
         #uUser = np.random.rand(userNrs, numFactors)
         #vItem = np.random.rand(numFactors, movieNrs)
 
@@ -211,23 +214,45 @@ def predictByMatrixFactorization(trainAndTestSets, globalAvg, numFactors=10, num
         sumAvgRmse += avgRmse
         print("Avg train RMSE for fold {0}: {1}".format(fold, avgRmse))
 
-        ###############################
-        # TEST
-        ###############################
+    ###############################
+    # TEST
+    ###############################
+    print()
+    for fold, (dataSet, uUser, vItem) in enumerate(zip(trainAndTestSets, uUsers, vItems)):
+
+        testSet = dataSet[1]
+
         testUserIds = testSet[:, 0]
         testMovieIds = testSet[:, 1]
         testRatings = testSet[:, 2]
         testMatrix = sparse.coo_matrix((testRatings, (testUserIds, testMovieIds)))
 
         testSse = 0
+        testIter = 0
         for user, movie, rating in zip(testMatrix.row, testMatrix.col, testMatrix.data):
             # calculate the error
-            if (user in uUser) and (movie in vItem):
-                testSse += (rating - np.sum(uUser[user] * vItem[movie])) ** 2
+            userVector = []
+            itemVector = []
+            if user in uUser:
+                userVector = uUser[user]
             else:
-                testSse += (rating - globalAvg) ** 2
+                for trainVectorUser in uUsers:
+                    if(user in trainVectorUser):
+                        userVector = trainVectorUser[user]
+                        break
+            if (movie in vItem):
+                itemVector = vItem[movie]
+            else:
+                for trainVectorItem in vItems:
+                    if(movie in trainVectorItem):
+                        itemVector = trainVectorItem[movie]
+                        break
+            #else:
+                #testSse += (rating - globalAvg) ** 2
 
-        testRmse = np.sqrt(testSse / len(ratings))
+            testSse += (rating - np.sum(userVector * itemVector)) ** 2
+
+        testRmse = np.sqrt(testSse / len(testMatrix.data))
         sumTestRmse += testRmse
         print("Avg test RMSE for fold {0}: {1}".format(fold, testRmse))
 
