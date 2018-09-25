@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import Data as data
 import Rating as rating
@@ -7,7 +6,7 @@ from collections import OrderedDict as OD
 from sklearn import linear_model
 
 filedir = "ml-1m/"
-ratingsFilename = "ratings1000.dat"
+ratingsFilename = "ratings.dat"
 nfolds = 5
 
 def main():
@@ -27,7 +26,7 @@ def main():
 
     predictedRatingsPerUser = rp.predictRatingPerUser(trainAndTestSets)
 
-    rp.predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser)
+    rp.predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser,globalAvg)
 
     #userFactors, itemFactors = rating.getUserAndItemFactors(ratings)
 

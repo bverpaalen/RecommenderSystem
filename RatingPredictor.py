@@ -92,21 +92,22 @@ def predictRating(trainAndTestSets, basedOn):
 
     return [meanRmses, foldMovieRatings]
 
-def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser):
+def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser,globalAvg):
     styler.printHeader("Linear combination of user and item averages")
 
-    trainLoops = 100
-
-    alpha = 0.5
-    beta = 0.5
-    delta = 0
-
     linearPrediction = []
+
     for fold, dataSet in enumerate(trainAndTestSets):
         trainSet = dataSet[0]
 
         userMeans = []
         itemMeans = []
+
+        users = np.unique(trainSet[:,0])
+        items = np.unique(trainSet[:,1])
+
+        usersMeanDic = {}
+        itemsMeansDic = {}
 
         for userId, itemId, actualRating in trainSet:
             predictedRatingPerUser = np.mean(predictedRatingsPerUser[fold][userId])
@@ -117,15 +118,73 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
             userMeans.append(predictedRatingPerUser)
             itemMeans.append(predictedRatingPerItem)
 
+            usersMeanDic.update({userId:predictedRatingPerUser})
+            itemsMeansDic.update({itemId:predictedRatingPerItem})
+
         linearPrediction = np.vstack([userMeans,itemMeans,np.ones(len(userMeans))]).T
         
-        S = np.linalg.lstsq(linearPrediction, trainSet[:,2])
+        S = np.linalg.lstsq(linearPrediction, trainSet[:,2],rcond=-1)
 
         SSE = str(S[1])
 
-        print("\nCoefficients: " + str(S[0][0])+ " "+str(S[0][1]))
-        print("Delta: "+str(S[0][2]))
-        print("Current SSE: "+SSE)   
+        alpha = S[0][0]
+        beta = S[0][1]
+        delta = S[0][2]
+
+        sum = 0
+        for userId,itemId, actualRating in trainSet:
+            predictedRatingPerUser = usersMeanDic.get(userId)
+            predictedRatingPerItem = itemsMeansDic.get(itemId)
+
+            prediction = alpha * predictedRatingPerUser + beta * predictedRatingPerItem + delta
+
+            if prediction > 5:
+                prediction = 5
+            elif prediction < 1:
+                prediction = 1
+
+            difference = prediction - actualRating
+            se = difference**2
+            sum += se
+        meansum = sum/len(trainSet)
+        RMSE = np.sqrt(meansum)
+
+        print("Alpha: "+str(alpha)+" Beta: "+str(beta)+" Delta: "+str(delta))
+        print("Fold: "+str(fold)+" RMSE Train: "+str(RMSE))
+        testSet = dataSet[1]
+
+        counter = 0
+        sum = 0
+        for userId,itemId,actualRating in testSet:
+            if (userId in users) and (itemId in items):
+                predictedRatingPerUser = usersMeanDic.get(userId)
+                predictedRatingPerItem = itemsMeansDic.get(itemId)
+
+                prediction = alpha * predictedRatingPerUser + beta * predictedRatingPerItem + delta
+
+                if prediction > 5:
+                    prediction = 5
+                elif prediction < 1:
+                    prediction = 1
+
+            elif (userId in users and itemId not in items):
+                prediction = usersMeanDic.get(userId)
+                counter+= 1
+            elif userId not in users and itemId in items:
+                prediction = itemsMeansDic.get(itemId)
+                counter+= 1
+            else:
+                counter+= 1
+                prediction = globalAvg
+            difference = prediction - actualRating
+            se = difference**2
+            sum += se
+        meansum = sum/len(testSet)
+        RMSE = np.sqrt(meansum)
+        print("Fold: " + str(fold) + " RMSE Test: " + str(RMSE))
+        print("Mismatch: "+str(counter))
+
+
  #styler.printFooter("Intercept: " + str(S[0][2]))
 
 
