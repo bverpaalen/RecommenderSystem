@@ -117,7 +117,7 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
     styler.printHeader("Linear combination of user and item averages")
 
     linearPrediction = []
-
+    RMSESum = 0
     for fold, dataSet in enumerate(trainAndTestSets):
         trainSet = dataSet[0]
 
@@ -202,11 +202,12 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
             sum += se
         meansum = sum/len(testSet)
         RMSE = np.sqrt(meansum)
+        RMSESum += RMSE
         print("Fold: " + str(fold) + " RMSE Test: " + str(RMSE))
         print("Mismatch: "+str(counter))
+    meanRMSE = RMSESum/len(trainAndTestSets)
 
-
- #styler.printFooter("Intercept: " + str(S[0][2]))
+    styler.printFooter("Mean LR avg error: " + str(meanRMSE))
 
 
 def predictByMatrixFactorization(trainAndTestSets, aggUserTrain, aggItemTrain, globalAvg, numFactors=10, numIter=75, regularization=0.05, learnRate=0.005):
