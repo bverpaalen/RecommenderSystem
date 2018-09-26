@@ -49,11 +49,10 @@ def predictRatingPerItem(trainAndTestSets, globalAvg):
 
 # basedOn is column nr; user or movie
 def predictRating(trainAndTestSets, globalAvg, basedOn):
-    print("")
     meanRmses = []
     foldMovieRatings = [{} for i in range(len(trainAndTestSets))]
     for fold, dataSet in enumerate(trainAndTestSets):
-        print("Fold " + str(fold) + ":")
+        print("\nFold " + str(fold) + ":")
 
         trainSet = dataSet[0]
         testSet = dataSet[1]
@@ -87,7 +86,7 @@ def predictRating(trainAndTestSets, globalAvg, basedOn):
 
         # print train error:
         meanTrainRmse = np.mean(trainRmses)
-        print("Train RMSE: " + str(meanTrainRmse))
+        print("\tTrain RMSE: " + str(meanTrainRmse))
 
         #################
         # TEST
@@ -108,7 +107,7 @@ def predictRating(trainAndTestSets, globalAvg, basedOn):
 
         # print test error:
         meanTestRmse = np.mean(testRmses)
-        print("Test RMSE: " + str(meanTestRmse))
+        print("\tTest RMSE: " + str(meanTestRmse))
 
         meanRmses.append([meanTrainRmse, meanTestRmse])
 
@@ -282,31 +281,33 @@ def predictByMatrixFactorization(trainAndTestSets, aggUserTrain, aggItemTrain, g
         testMatrix = sparse.coo_matrix((testRatings, (testUserIds, testMovieIds)))
 
         testSse = 0
-        teller = 0
+        movieMismatches = 0
+        userMismatches = 0
+        movieAndUserMismatches = 0
         for user, movie, rating in zip(testMatrix.row, testMatrix.col, testMatrix.data):
             # calculate the error
             prediction = 0
             if (user in uUser) and (movie in vItem):
                 prediction = np.sum(uUser[user] * vItem[movie])
             elif user in uUser and not (movie in vItem):
-                teller += 1
+                movieMismatches += 1
                 prediction = np.mean(aggUserTrain[fold][user])
             elif movie in vItem and not (user in uUser):
-                teller += 1
+                userMismatches += 1
                 prediction = np.mean(aggItemTrain[fold][movie])
             else:
-                teller += 1
+                movieAndUserMismatches += 1
                 prediction = globalAvg
-            #else:
-                #testSse += (rating - globalAvg) ** 2
 
             testSse += (rating - prediction) ** 2
 
-        print("aantal mismatch: " + str(teller))
+        print("\n- Number of user mismatches: " + str(userMismatches))
+        print("- Number of item mismatches: " + str(movieMismatches))
+        print("- Number of item and user mismatches: " + str(movieAndUserMismatches))
 
         testRmse = np.sqrt(testSse / len(testMatrix.data))
         sumTestRmse += testRmse
-        print("Avg test RMSE for fold {0}: {1}".format(fold, testRmse))
+        print("\n- Avg test RMSE for fold {0}: {1}".format(fold, testRmse))
         print()
 
     styler.printFooter("Avg train RMSE: " + str(sumAvgRmse / len(trainAndTestSets)) + "\nAvg test RMSE: " + str(sumTestRmse / len(trainAndTestSets)))
