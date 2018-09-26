@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import Data as data
 import Rating as rating
@@ -31,6 +30,7 @@ def main():
 
     #userFactors, itemFactors = rating.getUserAndItemFactors(ratings)
 
-    #rp.predictByMatrixFactorization(trainAndTestSets, aggUserTrain, aggItemTrain, globalAvg)
+    rp.predictByMatrixFactorization(trainAndTestSets, aggUserTrain, aggItemTrain, globalAvg)
+
 
 main()
