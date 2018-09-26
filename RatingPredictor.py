@@ -22,16 +22,17 @@ def predictBasedOnGlobalAvg(trainAndTestSets, globalAvg):
 
     rmses = np.array(rmses)
     # print the final conclusion for the global avg error as mean of the test sets:
-    styler.printFooter("Mean global avg error: " + str(np.mean(rmses[:,1])))
+    styler.printFooter("Mean global avg error: " + "\n\t Train: "+ str(np.mean(rmses[:,0])) + "\n\t Test: " + str(np.mean(rmses[:,1])))
 
 def predictRatingPerUser(trainAndTestSets, globalAvg):
     styler.printHeader("The average rating per user")
 
-    predictedRatings = predictRating(trainAndTestSets, 0)
+    predictedRatings = predictRating(trainAndTestSets, globalAvg, 0)
     meanRmses = predictedRatings[0]
 
     # print the final conclusion for avg per user:
-    styler.printFooter("Mean user avg error: " + str(np.mean(meanRmses)))
+    styler.printFooter("Mean train user RMSE: " + str(np.mean(meanRmses[:, 0])) + "\nMean test user RMSE: " + str(
+        np.mean(meanRmses[:, 1])))
 
     return predictedRatings[1]
 
@@ -42,7 +43,7 @@ def predictRatingPerItem(trainAndTestSets, globalAvg):
     meanRmses = predictedRatings[0]
 
     # print the final conclusion for avg per item:
-    styler.printFooter("Mean item avg error: " + str(np.mean(meanRmses)))
+    styler.printFooter("Mean train item RMSE: " + str(np.mean(meanRmses[:,0])) + "\nMean test item RMSE: " + str(np.mean(meanRmses[:,1])))
 
     return predictedRatings[1]
 
@@ -52,6 +53,8 @@ def predictRating(trainAndTestSets, globalAvg, basedOn):
     meanRmses = []
     foldMovieRatings = [{} for i in range(len(trainAndTestSets))]
     for fold, dataSet in enumerate(trainAndTestSets):
+        print("Fold " + str(fold) + ":")
+
         trainSet = dataSet[0]
         testSet = dataSet[1]
 
@@ -68,7 +71,28 @@ def predictRating(trainAndTestSets, globalAvg, basedOn):
 
         foldMovieRatings[fold].update(trainMovies)
 
-        rmses = []
+        #################
+        # TRAIN
+        #################
+        trainRmses = []
+        for id, trainRatings in trainMovies.items():
+
+            # if movie does not exist in train set, then use global avg of the movie
+            movieAvg = np.mean(trainMovies[id]) if id in trainMovies else globalAvg
+
+            se = (movieAvg - trainRatings) ** 2
+            rmse = np.sqrt(np.mean(se))
+
+            trainRmses.append(rmse)
+
+        # print train error:
+        meanTrainRmse = np.mean(trainRmses)
+        print("Train RMSE: " + str(meanTrainRmse))
+
+        #################
+        # TEST
+        #################
+        testRmses = []
         for id, testRatings in testMovies.items():
 
             movieAvg = 0.0
@@ -78,20 +102,17 @@ def predictRating(trainAndTestSets, globalAvg, basedOn):
             else:
                 movieAvg = globalAvg
 
-            # improve predictions by rounding values bigger than 5 to 5 and smaller than 1 to 1
-            # (valid ratings are always between 1 and 5).
-            testRatings[testRatings < 1] = 1
-            testRatings[testRatings > 5] = 5
             se = (movieAvg - testRatings) ** 2
 
-            rmses.append(np.sqrt(np.mean(se)))
+            testRmses.append(np.sqrt(np.mean(se)))
 
-        meanRmses.append(np.mean(rmses))
+        # print test error:
+        meanTestRmse = np.mean(testRmses)
+        print("Test RMSE: " + str(meanTestRmse))
 
-        # print error:
-        print("Fold " + str(fold) + ": RMSE: " + str(meanRmses[fold]))
+        meanRmses.append([meanTrainRmse, meanTestRmse])
 
-    return [meanRmses, foldMovieRatings]
+    return [np.array(meanRmses), foldMovieRatings]
 
 def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser):
     styler.printHeader("Linear combination of user and item averages")
@@ -166,6 +187,8 @@ def predictByMatrixFactorization(trainAndTestSets, aggUserTrain, aggItemTrain, g
     uUsers = []
     vItems = []
     for fold, dataSet in enumerate(trainAndTestSets):
+        print("Lengte train set: " + str(len(dataSet[0])))
+        print("Lengte test set: " + str(len(dataSet[1])))
         trainSet = dataSet[0]
 
         # create 2D sparse ratings matrix, with user id's as rows and movie id's as columns
@@ -225,21 +248,27 @@ def predictByMatrixFactorization(trainAndTestSets, aggUserTrain, aggItemTrain, g
         testMatrix = sparse.coo_matrix((testRatings, (testUserIds, testMovieIds)))
 
         testSse = 0
+        teller = 0
         for user, movie, rating in zip(testMatrix.row, testMatrix.col, testMatrix.data):
             # calculate the error
             prediction = 0
             if (user in uUser) and (movie in vItem):
                 prediction = np.sum(uUser[user] * vItem[movie])
-            if user in uUser and not (movie in vItem):
+            elif user in uUser and not (movie in vItem):
+                teller += 1
                 prediction = np.mean(aggUserTrain[fold][user])
             elif movie in vItem and not (user in uUser):
+                teller += 1
                 prediction = np.mean(aggItemTrain[fold][movie])
             else:
+                teller += 1
                 prediction = globalAvg
             #else:
                 #testSse += (rating - globalAvg) ** 2
 
             testSse += (rating - prediction) ** 2
+
+        print("aantal mismatch: " + str(teller))
 
         testRmse = np.sqrt(testSse / len(testMatrix.data))
         sumTestRmse += testRmse

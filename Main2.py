@@ -21,16 +21,16 @@ def main():
 
     trainAndTestSets = rating.getTrainAndTestSets(ratings)
 
-    #rp.predictBasedOnGlobalAvg(trainAndTestSets, globalAvg)
+    rp.predictBasedOnGlobalAvg(trainAndTestSets, globalAvg)
 
-    aggItemTrain = rp.predictRatingPerItem(trainAndTestSets)
+    aggItemTrain = rp.predictRatingPerItem(trainAndTestSets, globalAvg)
 
-    aggUserTrain = rp.predictRatingPerUser(trainAndTestSets)
+    aggUserTrain = rp.predictRatingPerUser(trainAndTestSets, globalAvg)
 
     #rp.predictByLinairRegression(trainAndTestSets, aggItemTrain, aggUserTrain)
 
     #userFactors, itemFactors = rating.getUserAndItemFactors(ratings)
 
-    rp.predictByMatrixFactorization(trainAndTestSets, aggUserTrain, aggItemTrain, globalAvg)
+    #rp.predictByMatrixFactorization(trainAndTestSets, aggUserTrain, aggItemTrain, globalAvg)
 
 main()
