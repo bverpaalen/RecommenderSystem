@@ -113,7 +113,7 @@ def predictRating(trainAndTestSets, globalAvg, basedOn):
 
     return [np.array(meanRmses), foldMovieRatings]
 
-def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser,globalAvg):
+def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predictedRatingsPerUser, globalAvg):
     styler.printHeader("Linear combination of user and item averages")
 
     linearPrediction = []
@@ -174,8 +174,10 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
         print("Fold: "+str(fold)+" RMSE Train: "+str(RMSE))
         testSet = dataSet[1]
 
-        counter = 0
         sum = 0
+        movieMismatches = 0
+        userMismatches = 0
+        movieAndUserMismatches = 0
         for userId,itemId,actualRating in testSet:
             if (userId in users) and (itemId in items):
                 predictedRatingPerUser = usersMeanDic.get(userId)
@@ -190,12 +192,12 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
 
             elif (userId in users and itemId not in items):
                 prediction = usersMeanDic.get(userId)
-                counter+= 1
+                movieMismatches+= 1
             elif userId not in users and itemId in items:
                 prediction = itemsMeansDic.get(itemId)
-                counter+= 1
+                userMismatches+= 1
             else:
-                counter+= 1
+                movieAndUserMismatches+= 1
                 prediction = globalAvg
             difference = prediction - actualRating
             se = difference**2
@@ -204,7 +206,9 @@ def predictByLinairRegression(trainAndTestSets, predictedRatingsPerItem, predict
         RMSE = np.sqrt(meansum)
         RMSESum += RMSE
         print("Fold: " + str(fold) + " RMSE Test: " + str(RMSE))
-        print("Mismatch: "+str(counter))
+        print("\n- Number of user mismatches: " + str(userMismatches))
+        print("- Number of item mismatches: " + str(movieMismatches))
+        print("- Number of item and user mismatches: " + str(movieAndUserMismatches))
     meanRMSE = RMSESum/len(trainAndTestSets)
 
     styler.printFooter("Mean LR avg error: " + str(meanRMSE))
